@@ -34,7 +34,15 @@
   }
   input:focus,select:focus{border-color:var(--accent)}
   .teamrow{display:flex;align-items:center;gap:9px;margin-bottom:8px}
-  .chip{width:22px;height:22px;border-radius:50%;flex:0 0 auto;border:2px solid #ffffff22}
+  .chip{
+    width:26px;height:26px;border-radius:50%;flex:0 0 auto;border:2px solid #ffffff2e;
+    padding:0;cursor:pointer;position:relative;
+  }
+  .chip:active{transform:scale(.94)}
+  .chip::after{
+    content:'';position:absolute;right:-2px;bottom:-2px;width:9px;height:9px;border-radius:50%;
+    background:var(--card);box-shadow:inset 0 0 0 1.5px var(--dim);
+  }
   .trm{background:none;border:none;color:#6a7183;font-size:19px;padding:2px 5px;cursor:pointer;flex:0 0 auto}
   .addt{
     width:100%;background:var(--card2);border:1px dashed var(--line);color:var(--dim);
@@ -137,6 +145,45 @@
     font-family:"D2Coding","Menlo","Consolas",monospace;white-space:pre;overflow:auto;
     -webkit-user-select:text;user-select:text;
   }
+
+  /* 팀 색상 선택 */
+  #clr{
+    display:none;position:fixed;inset:0;background:#000b;z-index:110;
+    align-items:flex-end;justify-content:center;
+  }
+  #clr .box{
+    background:var(--card);border:1px solid var(--line);border-bottom:none;
+    border-radius:16px 16px 0 0;padding:16px;width:100%;max-width:560px;
+    max-height:88vh;overflow-y:auto;
+  }
+  @media (min-width:561px){
+    #clr{align-items:center;padding:16px}
+    #clr .box{border-radius:16px;border-bottom:1px solid var(--line)}
+  }
+  .clrhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .clrhead h3{margin:0;font-size:15px;font-weight:700}
+  .clrx{background:none;border:none;color:var(--dim);font-size:16px;padding:4px 8px;cursor:pointer}
+  .sw{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .swbtn{
+    background:none;border:none;padding:0;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:5px;
+  }
+  .swc{
+    width:100%;aspect-ratio:1;border-radius:11px;box-shadow:inset 0 0 0 1px #ffffff2e;
+    display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;line-height:1;
+  }
+  .swbtn.sel .swc{outline:2px solid var(--accent);outline-offset:2px}
+  .swn{font-size:10.5px;color:var(--dim)}
+  .swbtn.sel .swn{color:var(--txt);font-weight:700}
+  .clrcustom{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-top:14px;padding:10px 12px;border:1px solid var(--line);
+    border-radius:10px;font-size:13px;color:var(--dim);
+  }
+  .clrcustom input[type=color]{
+    width:58px;height:34px;padding:2px;border-radius:8px;
+    border:1px solid var(--line);background:var(--card2);cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -188,7 +235,7 @@
     </div>
     <div class="hint">
       · 쿼터 점수는 <b>그 시점까지의 누적 점수</b>입니다. 4쿼터 칸에 적힌 값이 곧 최종 점수예요. (칸 아래 회색 숫자는 그 쿼터에 올린 점수)<br>
-      · 팀은 <b>＋ 팀 추가</b>로 늘리고 이름 옆 <b>×</b>로 지울 수 있어요 (최소 2팀).<br>
+      · 팀은 <b>＋ 팀 추가</b>로 늘리고 이름 옆 <b>×</b>로 지울 수 있어요 (최소 2팀). 이름 왼쪽 <b>동그라미를 누르면 팀 색상</b>을 바꿀 수 있습니다.<br>
       · 쿼터별 <b>공격권</b>은 버튼을 누를 때마다 <b>위 팀 → 아래 팀 → 미정</b>으로 바뀌고, <b>⇄</b>를 누르면 1쿼터 기준으로 번갈아 채워집니다.<br>
       · 한글 2칸·숫자 1칸으로 폭을 계산해 열을 맞췄습니다. 카톡 글꼴은 고정폭이 아니라 <b>간결형</b>도 준비했으니 채팅방에 붙여보고 고르세요.<br>
       · 입력값은 이 브라우저에 자동 저장돼 새로고침하거나 나중에 다시 들어와도 그대로 있습니다. 주소창은 깨끗하게 유지돼요.<br>
@@ -209,13 +256,39 @@
   </div>
 </div>
 
+<div id="clr">
+  <div class="box">
+    <div class="clrhead">
+      <h3 id="clrTitle">팀 색상</h3>
+      <button class="clrx" onclick="closeClr()" aria-label="닫기">✕</button>
+    </div>
+    <div class="sw" id="swGrid"></div>
+    <div class="clrcustom">
+      <span>직접 고르기</span>
+      <input type="color" id="clrCustom" aria-label="색상 직접 선택">
+    </div>
+    <div class="btns" style="margin:12px 0 0">
+      <button class="act" onclick="resetClr()">기본 색</button>
+      <button class="act pri" onclick="closeClr()">완료</button>
+    </div>
+  </div>
+</div>
+
 <script>
-/* ---------------- 팔레트 ---------------- */
+/* ---------------- 팔레트 ----------------
+   1·2·3팀 기본값은 유니폼 색(네이비·옐로우·화이트).
+   '팀 나누기' 앱과 같은 색값을 써서 두 앱의 팀 색이 일치합니다. */
 var PALETTE = [
-  {n:'네이비', c:'#2b4a9b'}, {n:'옐로우', c:'#e3b31a'}, {n:'화이트', c:'#e9edf5'},
-  {n:'레드',   c:'#e0533d'}, {n:'그린',   c:'#35b37e'}, {n:'퍼플',   c:'#8b5cf6'},
-  {n:'오렌지', c:'#ff8a3d'}, {n:'스카이', c:'#4bb7e8'}
+  {n:'네이비', c:'#1e3a8a'}, {n:'옐로우', c:'#eab308'}, {n:'화이트', c:'#f1f3f7'},
+  {n:'레드',   c:'#dc2626'}, {n:'그린',   c:'#16a34a'}, {n:'퍼플',   c:'#7c3aed'},
+  {n:'오렌지', c:'#f97316'}, {n:'스카이', c:'#0ea5e9'},
+  {n:'블랙',   c:'#334155'}, {n:'핑크',   c:'#ec4899'}
 ];
+/* 색을 고를 수 있게 되기 전 버전에서 쓰던 색값 → 현재 팔레트로 맞춰줌 */
+var OLD_COLORS = {
+  '#2b4a9b':'#1e3a8a', '#e3b31a':'#eab308', '#e9edf5':'#f1f3f7', '#e0533d':'#dc2626',
+  '#35b37e':'#16a34a', '#8b5cf6':'#7c3aed', '#ff8a3d':'#f97316', '#4bb7e8':'#0ea5e9'
+};
 var MAXT = 8;
 var state, fmt = 0;
 
@@ -333,7 +406,11 @@ function migrate(o){
   if (typeof o.teams[0] === 'string'){
     o.teams = o.teams.map(function(n,i){ return { id:i, name:n, c:(PALETTE[i]||PALETTE[0]).c }; });
   }
-  o.teams.forEach(function(t,i){ if (!t.c) t.c = (PALETTE[i]||PALETTE[0]).c; });
+  o.teams.forEach(function(t,i){
+    if (!t.c) t.c = (PALETTE[i]||PALETTE[0]).c;
+    var k = String(t.c).toLowerCase();
+    if (OLD_COLORS[k]) t.c = OLD_COLORS[k];
+  });
   o.games.forEach(function(g){ if (!g.p) g.p = [null,null,null,null]; });
   return o;
 }
@@ -353,9 +430,28 @@ function tname(id){
   return (t.name || '').trim() || ('팀' + (tidx(id)+1));
 }
 function tcolor(id){ var t = team(id); return t ? t.c : '#666'; }
+function rgb(hex){
+  var m = /^#?([0-9a-fA-F]{6})$/.exec(String(hex||''));
+  if (!m) return null;
+  var v = parseInt(m[1],16);
+  return [(v>>16)&255, (v>>8)&255, v&255];
+}
+function lum(c){ return (c[0]*299 + c[1]*587 + c[2]*114)/1000; }
+/* 색칠된 칩 위에 올릴 글자색 */
 function ink(hex){
-  var r = parseInt(hex.substr(1,2),16), g = parseInt(hex.substr(3,2),16), b = parseInt(hex.substr(5,2),16);
-  return (r*299 + g*587 + b*114)/1000 > 150 ? '#141821' : '#ffffff';
+  var c = rgb(hex); if (!c) return '#ffffff';
+  return lum(c) > 150 ? '#141821' : '#ffffff';
+}
+/* 어두운 배경 위의 '글자색'으로 쓸 때: 네이비·블랙처럼 어두운 색은
+   색조를 유지한 채 밝기만 올려 읽을 수 있게 만든다. */
+function onDark(hex){
+  var c = rgb(hex); if (!c) return hex;
+  var L = lum(c);
+  if (L >= 120) return hex;
+  var k = 120 / Math.max(L, 1);
+  return '#' + c.map(function(x){
+    return Math.min(255, Math.round(x * k)).toString(16).padStart(2,'0');
+  }).join('');
 }
 
 /* ---------------- 점수 헬퍼 (누적 점수) ---------------- */
@@ -407,7 +503,7 @@ function render(){
   var h = '';
   state.teams.forEach(function(t,i){
     h += '<div class="teamrow">' +
-         '<div class="chip" style="background:'+t.c+'"></div>' +
+         '<button class="chip" style="background:'+t.c+'" onclick="openClr('+t.id+')" title="팀 색상 바꾸기" aria-label="'+esc(t.name)+' 색상 바꾸기"></button>' +
          '<input type="text" value="'+esc(t.name)+'" maxlength="12" ' +
          'oninput="state.teams['+i+'].name=this.value;softUpdate()" placeholder="팀 이름">' +
          '<button class="trm" onclick="delTeam('+t.id+')" title="팀 삭제">×</button></div>';
@@ -434,7 +530,7 @@ function render(){
     for (var s=0;s<2;s++){
       var ti = s===0 ? g.a : g.b, tot = s===0 ? ta : tb, other = s===0 ? tb : ta;
       var bad = badRow(g.q[s]);
-      h += '<tr><td class="tn" style="color:'+tcolor(ti)+'">'+esc(tname(ti))+'</td>';
+      h += '<tr><td class="tn" style="color:'+onDark(tcolor(ti))+'">'+esc(tname(ti))+'</td>';
       for (var q=0;q<4;q++){
         var v = g.q[s][q], gn = gain(g.q[s], q);
         var isBad = v !== null && q > 0 && gn !== null && gn < 0;
@@ -507,7 +603,7 @@ function renderRank(){
   var h = '<table class="rank"><tr><th style="text-align:left">순위</th><th>경기</th><th>승</th><th>무</th><th>패</th><th>득점</th><th>실점</th><th>득실</th></tr>';
   st.forEach(function(t,k){
     var d = t.diff;
-    h += '<tr><td class="l"><span style="color:'+tcolor(t.id)+'">●</span> '+(k+1)+'. '+esc(tname(t.id))+'</td>' +
+    h += '<tr><td class="l"><span style="color:'+onDark(tcolor(t.id))+'">●</span> '+(k+1)+'. '+esc(tname(t.id))+'</td>' +
       '<td>'+t.g+'</td><td>'+t.w+'</td><td>'+t.d+'</td><td>'+t.l+'</td>' +
       '<td>'+t.pf+'</td><td>'+t.pa+'</td>' +
       '<td class="'+(d>0?'pos':d<0?'neg':'')+'">'+(d>0?'+':'')+d+'</td></tr>';
@@ -631,6 +727,40 @@ function altPoss(gi){
   for (var q=0;q<4;q++) p[q] = (s + q) % 2;
   render();
 }
+/* ---------------- 팀 색상 선택 ---------------- */
+var clrTarget = null;
+function openClr(id){
+  clrTarget = id;
+  document.getElementById('clrTitle').textContent = tname(id) + ' 색상';
+  renderSw();
+  document.getElementById('clr').style.display = 'flex';
+}
+function closeClr(){ document.getElementById('clr').style.display = 'none'; }
+function clrOpen(){ return document.getElementById('clr').style.display === 'flex'; }
+function renderSw(){
+  var cur = String(tcolor(clrTarget) || '').toLowerCase();
+  document.getElementById('swGrid').innerHTML = PALETTE.map(function(p){
+    var on = p.c.toLowerCase() === cur;
+    return '<button class="swbtn' + (on ? ' sel' : '') + '" onclick="pickClr(\'' + p.c + '\')" title="' + p.n + '">' +
+      '<span class="swc" style="background:' + p.c + ';color:' + ink(p.c) + '">' + (on ? '✓' : '') + '</span>' +
+      '<span class="swn">' + p.n + '</span></button>';
+  }).join('');
+  document.getElementById('clrCustom').value = /^#[0-9a-f]{6}$/i.test(cur) ? cur : '#000000';
+}
+function setTeamColor(id, hex){
+  var t = team(id);
+  if (!t) return;
+  t.c = hex;
+  render();                       /* 점수표·공격권·순위에 바로 반영 + 저장 */
+  if (clrOpen()) renderSw();
+}
+function pickClr(hex){ setTeamColor(clrTarget, hex); closeClr(); }
+function resetClr(){
+  var i = tidx(clrTarget);
+  setTeamColor(clrTarget, (PALETTE[i] || PALETTE[0]).c);
+  closeClr();
+}
+
 /* 팀 추가 / 삭제 */
 function addTeam(){
   if (state.teams.length >= MAXT){ toast('팀은 최대 ' + MAXT + '개까지예요'); return; }
@@ -807,6 +937,9 @@ state = load();
 render();
 document.getElementById('date').addEventListener('input', function(){ state.date = this.value; renderPreview(); save(); });
 document.getElementById('title').addEventListener('input', function(){ state.title = this.value; renderPreview(); save(); });
+document.getElementById('clrCustom').addEventListener('input', function(){ setTeamColor(clrTarget, this.value); });
+document.getElementById('clr').addEventListener('click', function(e){ if (e.target === this) closeClr(); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && clrOpen()) closeClr(); });
 </script>
 </body>
 </html>
